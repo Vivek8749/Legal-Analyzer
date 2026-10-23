@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "legal-analyzer"
+version = "0.1.0"
+description = "RAG-based legal document analyzer: finds one-sided terms and loopholes in contracts and explains them in plain English, using Claude, other frontier models, or local models via Ollama."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "anthropic>=2.1,<3",
+    "openai>=3.0,<4",      # OpenAI, Gemini, and other OpenAI-compatible APIs
+    "ollama>=0.6",         # local models
+    "pypdf>=5.0",
+    "numpy>=1.26",
+    "pydantic>=2.7",
+    "snowballstemmer>=2.2",
+    "fastembed>=0.7",
+    "rich>=13.7",
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "python-multipart>=0.0.9",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "httpx>=0.27",   # FastAPI TestClient
+    "fpdf2>=2.7",    # regenerates the sample PDF
+]
+
+[project.scripts]
+legal-analyzer = "legal_analyzer.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["legal_analyzer*"]
+
+[tool.setuptools.package-data]
+legal_analyzer = ["web/static/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

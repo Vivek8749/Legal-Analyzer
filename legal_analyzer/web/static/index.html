@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Legal Document Analyzer</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232f5bea' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3v18M7 21h10M5 7h14M5 7l-3 7a3 3 0 0 0 6 0zM19 7l-3 7a3 3 0 0 0 6 0z'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M7 21h10M5 7h14M5 7l-3 7a3 3 0 0 0 6 0zM19 7l-3 7a3 3 0 0 0 6 0z"/></svg>
+      <span>Legal Document Analyzer</span>
+    </div>
+    <div id="status" class="status" aria-live="polite"></div>
+  </header>
+  <div id="banner" class="banner" hidden></div>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <label id="dropzone" class="dropzone" tabindex="0">
+        <input id="file-input" type="file" accept=".pdf,.txt,.md" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>
+        <strong id="dropzone-title">Upload a contract</strong>
+        <span id="dropzone-hint">PDF or text file · drag &amp; drop or click</span>
+      </label>
+      <div class="sidebar-title">Documents</div>
+      <ul id="doc-list" class="doc-list"></ul>
+    </aside>
+
+    <main>
+      <section id="welcome" class="welcome">
+        <h1>Find the fine print that works against you</h1>
+        <p class="lead">Upload a contract, terms of service, lease, or employment agreement. The analyzer retrieves the
+          clauses that matter, has an AI model review them for one-sided terms, loopholes, and waived rights, and explains
+          each one in plain English, with the exact quote and page.</p>
+        <p class="muted small">Use a frontier model (Claude, GPT, Gemini) or run a local model with Ollama so the
+          document never leaves your computer. Pick the model in the header.</p>
+        <ol class="steps">
+          <li><strong>Upload</strong><span>The document is split into clauses and indexed locally for keyword and semantic search.</span></li>
+          <li><strong>Analyze</strong><span>Each risk area (liability, termination, data, disputes, fees, and more) is reviewed in parallel against the most relevant clauses.</span></li>
+          <li><strong>Understand</strong><span>Read prioritised findings, check every quote against the source, and ask follow-up questions with cited answers.</span></li>
+        </ol>
+        <p class="muted small">Try it with <code>samples/sample_terms_of_service.pdf</code>, a deliberately one-sided document for a fictional company.</p>
+      </section>
+
+      <section id="doc-view" hidden>
+        <div class="doc-header">
+          <div class="doc-heading">
+            <h1 id="doc-title"></h1>
+            <div id="doc-meta" class="muted small"></div>
+          </div>
+          <div id="doc-actions" class="doc-actions"></div>
+        </div>
+        <div id="doc-warnings"></div>
+
+        <form id="analyze-form" class="card analyze-card">
+          <div class="field">
+            <label for="perspective">Review on behalf of</label>
+            <input id="perspective" maxlength="300" placeholder="e.g. the tenant (default: the non-drafting party)">
+          </div>
+          <div class="field">
+            <label for="jurisdiction">Your jurisdiction <span class="muted">(optional)</span></label>
+            <input id="jurisdiction" maxlength="120" placeholder="e.g. California, USA">
+          </div>
+          <button id="analyze-btn" class="btn primary" type="submit">Analyze document</button>
+          <div id="progress" class="progress" hidden>
+            <div class="bar"><div id="progress-fill"></div></div>
+            <span id="progress-text" class="small"></span>
+          </div>
+        </form>
+
+        <nav class="tabs" role="tablist">
+          <button type="button" role="tab" data-tab="overview" class="active">Overview</button>
+          <button type="button" role="tab" data-tab="findings">Findings <span id="findings-count" class="count"></span></button>
+          <button type="button" role="tab" data-tab="glossary">Glossary <span id="glossary-count" class="count"></span></button>
+          <button type="button" role="tab" data-tab="ask">Ask a question</button>
+        </nav>
+
+        <div id="tab-overview" class="tab-panel"></div>
+
+        <div id="tab-findings" class="tab-panel" hidden>
+          <div class="filters">
+            <div id="severity-filters" class="chips"></div>
+            <select id="group-filter" aria-label="Filter by area"><option value="">All areas</option></select>
+            <input id="finding-search" type="search" placeholder="Search findings" aria-label="Search findings">
+          </div>
+          <div id="findings-list"></div>
+        </div>
+
+        <div id="tab-glossary" class="tab-panel" hidden>
+          <input id="glossary-search" type="search" placeholder="Search terms" aria-label="Search terms">
+          <div id="glossary-list"></div>
+        </div>
+
+        <div id="tab-ask" class="tab-panel" hidden>
+          <div id="chat-thread" class="chat-thread"></div>
+          <div id="suggestions" class="chips suggestions"></div>
+          <form id="chat-form" class="chat-form">
+            <textarea id="chat-input" rows="2" maxlength="4000" placeholder="Ask about this document, e.g. “Can they cancel my account without warning?”"></textarea>
+            <button id="chat-btn" class="btn primary" type="submit">Ask</button>
+          </form>
+          <p class="muted small">Answers cite the clauses they rely on. Click a number to see the passage.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="source-dialog">
+    <div class="dialog-head">
+      <div>
+        <h3 id="source-title"></h3>
+        <div id="source-meta" class="muted small"></div>
+      </div>
+      <button type="button" class="icon-btn" id="source-close" aria-label="Close">×</button>
+    </div>
+    <div id="source-body" class="source-body"></div>
+  </dialog>
+
+  <footer class="footer">Informational only, not legal advice. Check quotes against the original document and consult a qualified lawyer before relying on this analysis.</footer>
+  <script src="/static/app.js"></script>
+</body>
+</html>
